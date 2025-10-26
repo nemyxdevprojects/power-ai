@@ -1,56 +1,88 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Admin - Fausse IA</title>
-  <style>
-    body { font-family: Arial; background: #101010; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; }
-    #chat { width: 500px; background: #1a1a1a; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; height: 80vh; }
-    #messages { flex: 1; overflow-y: auto; margin-bottom: 10px; }
-    .msg { margin: 5px 0; padding: 8px 12px; border-radius: 8px; max-width: 80%; }
-    .user { background: #007bff; align-self: flex-start; }
-    .admin { background: #333; align-self: flex-end; }
-    #inputZone { display: flex; gap: 5px; }
-    input { flex: 1; padding: 10px; border: none; border-radius: 5px; }
-    button { background: #28a745; color: #fff; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer; }
-  </style>
+<meta charset="UTF-8">
+<title>Admin - Fausse IA</title>
+<style>
+body { font-family: Arial; background: #101010; color: #fff; display: flex; height: 100vh; margin: 0; }
+#sidebar { width: 250px; background: #1a1a1a; padding: 10px; overflow-y: auto; }
+#chat { flex: 1; display: flex; flex-direction: column; }
+#messages { flex: 1; overflow-y: auto; padding: 10px; }
+.msg { margin: 5px 0; padding: 8px 12px; border-radius: 8px; max-width: 70%; }
+.user { background: #007bff; align-self: flex-start; }
+.admin { background: #333; align-self: flex-end; }
+#inputZone { display: flex; gap: 5px; padding: 10px; }
+input { flex: 1; padding: 10px; border: none; border-radius: 5px; }
+button { background: #28a745; color: #fff; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer; }
+.userItem { padding: 8px; margin-bottom: 5px; background: #222; cursor: pointer; border-radius: 5px; }
+.userItem.active { background: #444; }
+</style>
 </head>
 <body>
-  <div id="chat">
-    <div id="messages"></div>
-    <div id="inputZone">
-      <input type="text" id="msg" placeholder="Réponds ici..." />
-      <button id="send">Envoyer</button>
-    </div>
+<div id="sidebar"></div>
+<div id="chat">
+  <div id="messages"></div>
+  <div id="inputZone">
+    <input type="text" id="msg" placeholder="Réponds ici..." />
+    <button id="send">Envoyer</button>
   </div>
+</div>
+<script>
+const ws = new WebSocket(`wss://${window.location.host}/admin`);
+let conversations = {};
+let currentUser = null;
 
-  <script>
-    const ws = new WebSocket(`wss://${window.location.host}/admin`);
-    const messagesDiv = document.getElementById("messages");
-    const input = document.getElementById("msg");
-    const sendBtn = document.getElementById("send");
+const sidebar = document.getElementById("sidebar");
+const messagesDiv = document.getElementById("messages");
+const input = document.getElementById("msg");
+const sendBtn = document.getElementById("send");
 
-    function addMessage(text, sender) {
-      const div = document.createElement("div");
-      div.className = `msg ${sender}`;
-      div.textContent = text;
-      messagesDiv.appendChild(div);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
+function renderSidebar() {
+  sidebar.innerHTML = '';
+  Object.keys(conversations).forEach(userId => {
+    const div = document.createElement('div');
+    div.className = 'userItem' + (userId===currentUser?' active':'');
+    div.textContent = userId;
+    div.onclick = () => { currentUser = userId; renderMessages(); renderSidebar(); };
+    sidebar.appendChild(div);
+  });
+}
 
-    sendBtn.onclick = () => {
-      if (input.value.trim() !== "") {
-        const msg = { type: "reply", text: input.value };
-        ws.send(JSON.stringify(msg));
-        addMessage(input.value, "admin");
-        input.value = "";
-      }
-    };
+function renderMessages() {
+  messagesDiv.innerHTML = '';
+  if(!currentUser) return;
+  conversations[currentUser].forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'msg ' + m.sender;
+    div.textContent = m.text;
+    messagesDiv.appendChild(div);
+  });
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
 
-    ws.onmessage = event => {
-      const data = JSON.parse(event.data);
-      addMessage(data.text, data.sender);
-    };
-  </script>
+ws.onmessage = event => {
+  const data = JSON.parse(event.data);
+  if(data.type === 'init') {
+    conversations = data.conversations;
+    renderSidebar();
+  } else if(data.type === 'new_message') {
+    const { userId, message } = data;
+    if(!conversations[userId]) conversations[userId] = [];
+    conversations[userId].push(message);
+    renderSidebar();
+    if(userId === currentUser) renderMessages();
+  }
+};
+
+sendBtn.onclick = () => {
+  if(input.value.trim() && currentUser) {
+    const text = input.value;
+    ws.send(JSON.stringify({ type:'reply', userId: currentUser, text }));
+    conversations[currentUser].push({ sender:'admin', text, timestamp: Date.now() });
+    renderMessages();
+    input.value = '';
+  }
+};
+</script>
 </body>
 </html>

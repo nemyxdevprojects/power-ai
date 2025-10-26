@@ -1,1 +1,14 @@
-[]
+{
+  "c8aec353-8016-439d-afc4-1d16f1700870": [
+    {
+      "sender": "user",
+      "text": "test",
+      "timestamp": 1761497740699
+    },
+    {
+      "sender": "admin",
+      "text": "oui",
+      "timestamp": 1761497747222
+    }
+  ]
+}
