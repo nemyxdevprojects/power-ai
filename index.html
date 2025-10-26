@@ -2,27 +2,45 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>IA virtuelle</title>
+<title>Power AI</title>
 <style>
-body { font-family: Arial; background: #111; color: #eee; display: flex; justify-content: center; align-items: center; height: 100vh; }
-#chat { width: 400px; background: #1a1a1a; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; height: 80vh; }
-#messages { flex: 1; overflow-y: auto; margin-bottom: 10px; }
-.msg { margin: 5px 0; padding: 8px 12px; border-radius: 8px; max-width: 80%; }
-.user { background: #007bff; align-self: flex-end; }
-.admin { background: #333; align-self: flex-start; }
-#inputZone { display: flex; gap: 5px; }
-input { flex: 1; padding: 10px; border: none; border-radius: 5px; }
-button { background: #007bff; color: #fff; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer; }
+/* Reset */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* Body & font */
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0e0e0e; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; }
+
+/* Chat container */
+#chat { width: 420px; height: 80vh; display: flex; flex-direction: column; border-radius: 15px; overflow: hidden; box-shadow: 0 0 30px rgba(0,0,0,0.7); background: #1a1a1a; }
+
+/* Header gradient */
+#header { height: 60px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; background: linear-gradient(90deg, #6a11cb, #2575fc); text-shadow: 1px 1px 5px rgba(0,0,0,0.5); }
+
+/* Messages area */
+#messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+
+/* Message bubbles */
+.msg { padding: 10px 15px; border-radius: 15px; max-width: 75%; word-wrap: break-word; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.user { background: #2575fc; align-self: flex-end; color: #fff; }
+.admin { background: #333; align-self: flex-start; color: #fff; }
+
+/* Input area */
+#inputZone { display: flex; gap: 8px; padding: 10px; background: #121212; }
+#inputZone input { flex: 1; padding: 12px; border-radius: 10px; border: none; outline: none; background: #222; color: #fff; }
+#inputZone button { padding: 12px 20px; border-radius: 10px; border: none; background: #6a11cb; background: linear-gradient(90deg, #6a11cb, #2575fc); color: #fff; cursor: pointer; font-weight: bold; transition: 0.2s; }
+#inputZone button:hover { opacity: 0.9; }
 </style>
 </head>
 <body>
 <div id="chat">
+  <div id="header">Power AI</div>
   <div id="messages"></div>
   <div id="inputZone">
     <input type="text" id="msg" placeholder="Écris un message..." />
     <button id="send">Envoyer</button>
   </div>
 </div>
+
 <script>
 let userId = null;
 const ws = new WebSocket(`wss://${window.location.host}`);
@@ -56,6 +74,5 @@ sendBtn.onclick = () => {
   }
 };
 </script>
-
 </body>
 </html>

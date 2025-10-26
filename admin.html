@@ -2,31 +2,51 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Admin - Fausse IA</title>
+<title>Power AI - Admin</title>
 <style>
-body { font-family: Arial; background: #101010; color: #fff; display: flex; height: 100vh; margin: 0; }
-#sidebar { width: 250px; background: #1a1a1a; padding: 10px; overflow-y: auto; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0e0e0e; color: #fff; display: flex; height: 100vh; }
+
+/* Sidebar */
+#sidebar { width: 280px; background: #1a1a1a; padding: 15px; overflow-y: auto; border-right: 2px solid #222; }
+.userItem { padding: 10px; margin-bottom: 6px; border-radius: 10px; background: #222; cursor: pointer; transition: 0.2s; }
+.userItem.active { background: #2575fc; color: #fff; }
+.userItem:hover { background: #333; }
+
+/* Chat area */
 #chat { flex: 1; display: flex; flex-direction: column; }
-#messages { flex: 1; overflow-y: auto; padding: 10px; }
-.msg { margin: 5px 0; padding: 8px 12px; border-radius: 8px; max-width: 70%; }
-.user { background: #007bff; align-self: flex-start; }
-.admin { background: #333; align-self: flex-end; }
-#inputZone { display: flex; gap: 5px; padding: 10px; }
-input { flex: 1; padding: 10px; border: none; border-radius: 5px; }
-button { background: #28a745; color: #fff; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer; }
-.userItem { padding: 8px; margin-bottom: 5px; background: #222; cursor: pointer; border-radius: 5px; }
-.userItem.active { background: #444; }
+
+/* Header */
+#header { height: 60px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; background: linear-gradient(90deg, #6a11cb, #2575fc); text-shadow: 1px 1px 5px rgba(0,0,0,0.5); }
+
+/* Messages */
+#messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.msg { padding: 10px 15px; border-radius: 15px; max-width: 75%; word-wrap: break-word; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.user { background: #2575fc; align-self: flex-start; color: #fff; }
+.admin { background: #333; align-self: flex-end; color: #fff; }
+
+/* Input */
+#inputZone { display: flex; gap: 8px; padding: 10px; background: #121212; }
+#inputZone input { flex: 1; padding: 12px; border-radius: 10px; border: none; outline: none; background: #222; color: #fff; }
+#inputZone button { padding: 12px 20px; border-radius: 10px; border: none; background: #6a11cb; background: linear-gradient(90deg, #6a11cb, #2575fc); color: #fff; cursor: pointer; font-weight: bold; transition: 0.2s; }
+#inputZone button:hover { opacity: 0.9; }
+
+/* Layout */
+body { display: flex; }
 </style>
 </head>
 <body>
 <div id="sidebar"></div>
 <div id="chat">
+  <div id="header">Power AI - Admin</div>
   <div id="messages"></div>
   <div id="inputZone">
     <input type="text" id="msg" placeholder="Réponds ici..." />
     <button id="send">Envoyer</button>
   </div>
 </div>
+
 <script>
 const ws = new WebSocket(`wss://${window.location.host}/admin`);
 let conversations = {};
