@@ -5,104 +5,139 @@
 <title>Power AI - Admin</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0e0e0e; color: #fff; height: 100vh; display: flex; justify-content: center; align-items: center; }
 
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0e0e0e; color: #fff; display: flex; height: 100vh; }
+/* login screen */
+#loginScreen { width: 300px; padding: 30px; background: #1a1a1a; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.7); text-align: center; }
+#loginScreen input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: none; background: #222; color: #fff; }
+#loginScreen button { padding: 12px 20px; border-radius: 10px; border: none; background: linear-gradient(90deg,#6a11cb,#2575fc); color: #fff; font-weight: bold; cursor: pointer; }
+#loginScreen button:hover { opacity: 0.9; }
 
-/* Sidebar */
+/* main panel */
+#mainPanel { display: none; height: 90vh; width: 90vw; display: flex; background: #1a1a1a; border-radius: 15px; overflow: hidden; box-shadow: 0 0 30px rgba(0,0,0,0.7); }
 #sidebar { width: 280px; background: #1a1a1a; padding: 15px; overflow-y: auto; border-right: 2px solid #222; }
 .userItem { padding: 10px; margin-bottom: 6px; border-radius: 10px; background: #222; cursor: pointer; transition: 0.2s; }
 .userItem.active { background: #2575fc; color: #fff; }
 .userItem:hover { background: #333; }
-
-/* Chat area */
 #chat { flex: 1; display: flex; flex-direction: column; }
-
-/* Header */
-#header { height: 60px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; background: linear-gradient(90deg, #6a11cb, #2575fc); text-shadow: 1px 1px 5px rgba(0,0,0,0.5); }
-
-/* Messages */
+#header { height: 60px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; background: linear-gradient(90deg,#6a11cb,#2575fc); text-shadow: 1px 1px 5px rgba(0,0,0,0.5); }
 #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .msg { padding: 10px 15px; border-radius: 15px; max-width: 75%; word-wrap: break-word; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
 .user { background: #2575fc; align-self: flex-start; color: #fff; }
 .admin { background: #333; align-self: flex-end; color: #fff; }
-
-/* Input */
 #inputZone { display: flex; gap: 8px; padding: 10px; background: #121212; }
 #inputZone input { flex: 1; padding: 12px; border-radius: 10px; border: none; outline: none; background: #222; color: #fff; }
-#inputZone button { padding: 12px 20px; border-radius: 10px; border: none; background: #6a11cb; background: linear-gradient(90deg, #6a11cb, #2575fc); color: #fff; cursor: pointer; font-weight: bold; transition: 0.2s; }
+#inputZone button { padding: 12px 20px; border-radius: 10px; border: none; background: linear-gradient(90deg,#6a11cb,#2575fc); color: #fff; cursor: pointer; font-weight: bold; transition: 0.2s; }
 #inputZone button:hover { opacity: 0.9; }
-
-/* Layout */
-body { display: flex; }
 </style>
 </head>
 <body>
-<div id="sidebar"></div>
-<div id="chat">
-  <div id="header">Power AI - Admin</div>
-  <div id="messages"></div>
-  <div id="inputZone">
-    <input type="text" id="msg" placeholder="Réponds ici..." />
-    <button id="send">Envoyer</button>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <h2>Admin Power AI</h2>
+  <input type="password" id="password" placeholder="Mot de passe">
+  <br>
+  <button id="loginBtn">Connexion</button>
+  <p id="error" style="color:red;"></p>
+</div>
+
+<!-- MAIN PANEL -->
+<div id="mainPanel">
+  <div id="sidebar"></div>
+  <div id="chat">
+    <div id="header">Power AI - Admin</div>
+    <div id="messages"></div>
+    <div id="inputZone">
+      <input type="text" id="msg" placeholder="Réponds ici...">
+      <button id="send">Envoyer</button>
+    </div>
   </div>
 </div>
 
 <script>
-const ws = new WebSocket(`wss://${window.location.host}/admin`);
-let conversations = {};
-let currentUser = null;
+const ADMIN_PASSWORD = "aydminAI2013"; // mot de passe simple
+const loginScreen = document.getElementById("loginScreen");
+const mainPanel = document.getElementById("mainPanel");
+const loginBtn = document.getElementById("loginBtn");
+const errorP = document.getElementById("error");
+const passwordInput = document.getElementById("password");
 
-const sidebar = document.getElementById("sidebar");
-const messagesDiv = document.getElementById("messages");
-const input = document.getElementById("msg");
-const sendBtn = document.getElementById("send");
+loginBtn.addEventListener("click", doLogin);
+passwordInput.addEventListener("keypress", e => { if(e.key==="Enter") doLogin(); });
 
-function renderSidebar() {
-  sidebar.innerHTML = '';
-  Object.keys(conversations).forEach(userId => {
-    const div = document.createElement('div');
-    div.className = 'userItem' + (userId===currentUser?' active':'');
-    div.textContent = userId;
-    div.onclick = () => { currentUser = userId; renderMessages(); renderSidebar(); };
-    sidebar.appendChild(div);
-  });
+function doLogin(){
+  if(passwordInput.value === ADMIN_PASSWORD){
+    loginScreen.style.display = "none";
+    mainPanel.style.display = "flex";
+    initAdminPanel(); // init WS et UI
+  }else{
+    errorP.textContent = "Mot de passe incorrect !";
+  }
 }
 
-function renderMessages() {
-  messagesDiv.innerHTML = '';
-  if(!currentUser) return;
-  conversations[currentUser].forEach(m => {
-    const div = document.createElement('div');
-    div.className = 'msg ' + m.sender;
-    div.textContent = m.text;
-    messagesDiv.appendChild(div);
-  });
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+// ---------- ADMIN PANEL ----------
+function initAdminPanel(){
+  const ws = new WebSocket(`wss://${window.location.host}/admin`);
+  let conversations = {};
+  let currentUser = null;
+
+  const sidebar = document.getElementById("sidebar");
+  const messagesDiv = document.getElementById("messages");
+  const input = document.getElementById("msg");
+  const sendBtn = document.getElementById("send");
+
+  function renderSidebar(){
+    sidebar.innerHTML = '';
+    Object.keys(conversations).forEach(userId=>{
+      const div = document.createElement('div');
+      div.className = 'userItem' + (userId===currentUser?' active':'');
+      div.textContent = userId;
+      div.onclick = ()=>{ currentUser=userId; renderMessages(); renderSidebar(); };
+      sidebar.appendChild(div);
+    });
+  }
+
+  function renderMessages(){
+    messagesDiv.innerHTML = '';
+    if(!currentUser) return;
+    conversations[currentUser].forEach(m=>{
+      const div = document.createElement('div');
+      div.className = 'msg ' + m.sender;
+      div.textContent = m.text;
+      messagesDiv.appendChild(div);
+    });
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  ws.onmessage = event=>{
+    const data = JSON.parse(event.data);
+    if(data.type==='init'){
+      conversations = data.conversations;
+      renderSidebar();
+    } else if(data.type==='new_message'){
+      const { userId, message } = data;
+      if(!conversations[userId]) conversations[userId]=[];
+      conversations[userId].push(message);
+      renderSidebar();
+      if(userId===currentUser) renderMessages();
+    }
+  };
+
+  sendBtn.onclick = ()=>{
+    if(input.value.trim() && currentUser){
+      const text = input.value;
+      ws.send(JSON.stringify({ type:'reply', userId: currentUser, text }));
+      conversations[currentUser].push({ sender:'admin', text, timestamp: Date.now() });
+      renderMessages();
+      input.value='';
+    }
+  };
+
+  // envoyer avec Entrée
+  input.addEventListener("keypress", e=>{ if(e.key==='Enter') sendBtn.click(); });
 }
-
-ws.onmessage = event => {
-  const data = JSON.parse(event.data);
-  if(data.type === 'init') {
-    conversations = data.conversations;
-    renderSidebar();
-  } else if(data.type === 'new_message') {
-    const { userId, message } = data;
-    if(!conversations[userId]) conversations[userId] = [];
-    conversations[userId].push(message);
-    renderSidebar();
-    if(userId === currentUser) renderMessages();
-  }
-};
-
-sendBtn.onclick = () => {
-  if(input.value.trim() && currentUser) {
-    const text = input.value;
-    ws.send(JSON.stringify({ type:'reply', userId: currentUser, text }));
-    conversations[currentUser].push({ sender:'admin', text, timestamp: Date.now() });
-    renderMessages();
-    input.value = '';
-  }
-};
 </script>
+
 </body>
 </html>
