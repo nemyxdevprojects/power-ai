@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Power AI - Admin</title>
 <style>
-body{font-family:'Segoe UI',sans-serif;background:#0e0e0e;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;}
+body{font-family:'Segoe UI',sans-serif;background:#0e0e0e;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}
 #loginScreen{width:360px;padding:26px;background:#1a1a1a;border-radius:14px;text-align:center;}
 #loginScreen input{width:100%;padding:12px;border-radius:10px;border:none;margin-bottom:10px;background:#222;color:#fff;}
 #loginScreen button{padding:11px 18px;border-radius:10px;border:none;background:linear-gradient(90deg,#6a11cb,#2575fc);color:#fff;cursor:pointer;font-weight:600;}
@@ -22,117 +22,110 @@ body{font-family:'Segoe UI',sans-serif;background:#0e0e0e;color:#fff;display:fle
 .admin{background:#222;align-self:flex-end;color:#fff;}
 #inputZone{display:flex;gap:10px;padding:12px;background:#0f0f0f;border-top:1px solid #222;}
 #inputZone input{flex:1;padding:12px;border-radius:10px;border:none;background:#222;color:#fff;}
-#inputZone button{padding:10px 16px;border-radius:10px;border:none;background:linear-gradient(90deg,#6a11cb,#2575fc);color:#fff;cursor:pointer;font-weight:600;}
+#inputZone button{padding:10px 16px;border-radius:10px;border:none;background:linear-gradient(90deg,#6a11cb,#2575fc);color:#fff;font-weight:bold;cursor:pointer;}
 #inputZone button:active{transform:translateY(1px);}
-#sidebar button{margin-left:6px;padding:4px 8px;border:none;border-radius:8px;background:#ff4b4b;color:#fff;cursor:pointer;}
 </style>
 </head>
 <body>
 
 <div id="loginScreen">
-<h2>Power AI - Admin</h2>
-<input type="password" id="pwd" placeholder="Mot de passe">
-<button id="btnLogin">Connexion</button>
-<div id="error"></div>
+  <h2>Admin Login</h2>
+  <input type="password" id="pwd" placeholder="Mot de passe">
+  <button id="loginBtn">Se connecter</button>
+  <div id="error"></div>
 </div>
 
 <div id="mainPanel">
   <div id="sidebar"></div>
   <div id="chat">
-    <div id="header">Power AI - Admin</div>
+    <div id="header">Power AI</div>
     <div id="messages"></div>
     <div id="inputZone">
-      <input id="adminMsg" placeholder="Réponds ici...">
+      <input type="text" id="adminMsgInput" placeholder="Écrire une réponse..."/>
       <button id="btnSend">Envoyer</button>
     </div>
   </div>
 </div>
 
 <script>
+let ws;
+let conversations={};
+let currentUser=null;
+
 const loginScreen=document.getElementById('loginScreen');
-const mainPanel=document.getElementById('mainPanel');
-const btnLogin=document.getElementById('btnLogin');
 const pwdInput=document.getElementById('pwd');
+const loginBtn=document.getElementById('loginBtn');
 const errorDiv=document.getElementById('error');
-btnLogin.addEventListener('click',doLogin);
-pwdInput.addEventListener('keypress',e=>{if(e.key==='Enter')doLogin();});
+const mainPanel=document.getElementById('mainPanel');
+const sidebar=document.getElementById('sidebar');
+const messagesDiv=document.getElementById('messages');
+const adminMsgInput=document.getElementById('adminMsgInput');
+const btnSend=document.getElementById('btnSend');
 
-async function doLogin(){
+loginBtn.onclick=async()=>{
   const pwd=pwdInput.value.trim();
-  if(!pwd){ errorDiv.textContent='Entre le mot de passe.'; return;}
-  try{
-    const res=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd})});
-    if(res.ok){ showPanel(); } else{ errorDiv.textContent='Mot de passe incorrect.';}
-  }catch(e){ errorDiv.textContent='Erreur serveur.'; console.error(e);}
-}
+  if(!pwd) return;
+  const res=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd})});
+  if(res.ok){
+    loginScreen.style.display='none';
+    mainPanel.style.display='flex';
+    initWS();
+  } else errorDiv.textContent='Mot de passe incorrect';
+};
 
-function showPanel(){
-  loginScreen.style.display='none';
-  mainPanel.style.display='flex';
-  initAdminPanel();
-}
-
-function initAdminPanel(){
+function initWS(){
   const base=window.location.protocol==='https:'?'wss':'ws';
-  const ws=new WebSocket(`${base}://${window.location.host}/admin`);
-  const sidebar=document.getElementById('sidebar');
-  const messagesDiv=document.getElementById('messages');
-  const adminMsgInput=document.getElementById('adminMsg');
-  const btnSend=document.getElementById('btnSend');
-  let conversations={};
-  let currentUser=null;
+  ws=new WebSocket(`${base}://${window.location.host}/admin`);
 
-  function renderSidebar(){
-    sidebar.innerHTML='';
-    Object.keys(conversations).sort((a,b)=>{
-      const la=conversations[a].messages.length?conversations[a].messages[conversations[a].messages.length-1].timestamp:0;
-      const lb=conversations[b].messages.length?conversations[b].messages[conversations[b].messages.length-1].timestamp:0;
-      return lb-la;
-    }).forEach(userId=>{
-      const div=document.createElement('div');
-      div.className='userItem'+(userId===currentUser?' active':'');
-      const name=conversations[userId].name||'Sans Nom';
-      div.innerHTML=`<span>${name} (${userId.substring(0,8)}…)</span>`;
-      const delBtn=document.createElement('button');
-      delBtn.textContent='Supprimer';
-      delBtn.onclick=(e)=>{ e.stopPropagation(); if(confirm(`Supprimer la session ${name}?`)){ ws.send(JSON.stringify({type:'delete_session', userId})); if(currentUser===userId){ currentUser=null; messagesDiv.innerHTML=''; } } };
-      div.appendChild(delBtn);
-      div.onclick=()=>{ currentUser=userId; renderMessages(); renderSidebar(); };
-      sidebar.appendChild(div);
-    });
-  }
-
-  function renderMessages(){
-    messagesDiv.innerHTML='';
-    if(!currentUser) return;
-    (conversations[currentUser].messages||[]).forEach(m=>{
-      const div=document.createElement('div');
-      div.className='msg '+m.sender;
-      div.textContent=m.text;
-      messagesDiv.appendChild(div);
-    });
-    messagesDiv.scrollTop=messagesDiv.scrollHeight;
-  }
-
-  ws.onmessage=(ev)=>{
+  ws.onmessage=ev=>{
     let data;
-    try{ data=JSON.parse(ev.data);}catch(e){return;}
-    if(data.type==='init'){ conversations=data.conversations||{}; renderSidebar(); }
-    else if(data.type==='new_message'){ const {userId,message}=data; if(!conversations[userId]) conversations[userId]={messages:[]}; conversations[userId].messages.push(message); renderSidebar(); if(userId===currentUser) renderMessages();}
+    try{ data=JSON.parse(ev.data);}catch(e){ return;}
+    if(data.type==='init'){ conversations=data.conversations; renderSidebar(); }
+    else if(data.type==='new_message'){ const {userId,message}=data; if(!conversations[userId]) conversations[userId]={messages:[]}; conversations[userId].messages=[]; conversations[userId].messages.push(message); renderSidebar(); if(userId===currentUser) renderMessages();}
     else if(data.type==='delete_session'){ delete conversations[data.userId]; if(currentUser===data.userId){ currentUser=null; messagesDiv.innerHTML=''; } renderSidebar(); }
   };
 
   btnSend.onclick=sendReply;
   adminMsgInput.addEventListener('keypress',e=>{if(e.key==='Enter')sendReply();});
-  function sendReply(){
-    const txt=adminMsgInput.value.trim();
-    if(!txt||!currentUser) return;
-    ws.send(JSON.stringify({type:'reply', userId:currentUser, text:txt}));
-    conversations[currentUser].messages.push({sender:'admin', text:txt, timestamp:Date.now()});
-    renderMessages();
-    adminMsgInput.value='';
-  }
+}
+
+function renderSidebar(){
+  sidebar.innerHTML='';
+  Object.keys(conversations).forEach(userId=>{
+    const div=document.createElement('div');
+    div.className='userItem'+(userId===currentUser?' active':'');
+    const name=conversations[userId].name||'Sans Nom';
+    div.innerHTML=`<span>${name} (${userId.substring(0,8)}…)</span>`;
+    const delBtn=document.createElement('button');
+    delBtn.textContent='Supprimer';
+    delBtn.onclick=(e)=>{ e.stopPropagation(); if(confirm(`Supprimer la session ${name}?`)){ ws.send(JSON.stringify({type:'delete_session', userId})); if(currentUser===userId){ currentUser=null; messagesDiv.innerHTML=''; } } };
+    div.appendChild(delBtn);
+    div.onclick=()=>{ currentUser=userId; renderMessages(); renderSidebar(); };
+    sidebar.appendChild(div);
+  });
+}
+
+function renderMessages(){
+  messagesDiv.innerHTML='';
+  if(!currentUser) return;
+  (conversations[currentUser].messages||[]).forEach(m=>{
+    const div=document.createElement('div');
+    div.className='msg '+m.sender;
+    div.textContent=m.text;
+    messagesDiv.appendChild(div);
+  });
+  messagesDiv.scrollTop=messagesDiv.scrollHeight;
+}
+
+function sendReply(){
+  const txt=adminMsgInput.value.trim();
+  if(!txt||!currentUser) return;
+  ws.send(JSON.stringify({type:'reply', userId:currentUser, text:txt}));
+  conversations[currentUser].messages.push({sender:'admin', text:txt, timestamp:Date.now()});
+  renderMessages();
+  adminMsgInput.value='';
 }
 </script>
+
 </body>
 </html>
