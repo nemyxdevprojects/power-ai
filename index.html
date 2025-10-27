@@ -4,111 +4,77 @@
 <meta charset="UTF-8">
 <title>Power AI</title>
 <style>
-/* Reset */
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-/* Body & font */
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0e0e0e; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; }
-
-/* Chat container */
-#chat { width: 420px; height: 80vh; display: flex; flex-direction: column; border-radius: 15px; overflow: hidden; box-shadow: 0 0 30px rgba(0,0,0,0.7); background: #1a1a1a; }
-
-/* Header gradient */
-#header { height: 60px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; background: linear-gradient(90deg, #6a11cb, #2575fc); text-shadow: 1px 1px 5px rgba(0,0,0,0.5); }
-
-/* Messages area */
-#messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-
-/* Message bubbles */
-.msg { padding: 10px 15px; border-radius: 15px; max-width: 75%; word-wrap: break-word; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
-.user { background: #2575fc; align-self: flex-end; color: #fff; }
-.admin { background: #333; align-self: flex-start; color: #fff; }
-
-/* Typing animation */
-.typing {
-  align-self: flex-start;
-  background: #555;
-  border-radius: 15px;
-  padding: 10px 15px;
-  color: #eee;
-  font-style: italic;
-  animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0% { opacity: 0.3; }
-  50% { opacity: 1; }
-  100% { opacity: 0.3; }
-}
-
-/* Input area */
-#inputZone { display: flex; gap: 8px; padding: 10px; background: #121212; }
-#inputZone input { flex: 1; padding: 12px; border-radius: 10px; border: none; outline: none; background: #222; color: #fff; }
-#inputZone button { padding: 12px 20px; border-radius: 10px; border: none; background: linear-gradient(90deg, #6a11cb, #2575fc); color: #fff; cursor: pointer; font-weight: bold; transition: 0.2s; }
-#inputZone button:hover { opacity: 0.9; }
+body { font-family: 'Segoe UI', sans-serif; background:#0e0e0e; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; }
+#chatBox { width:90%; max-width:600px; height:80%; display:flex; flex-direction:column; border-radius:12px; background:#1a1a1a; overflow:hidden; box-shadow:0 0 20px rgba(0,0,0,0.7);}
+#messages { flex:1; padding:12px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;}
+.msg { padding:10px 14px; border-radius:14px; max-width:75%; word-wrap:break-word; }
+.user { background:#2575fc; align-self:flex-start; color:#fff; }
+.admin { background:#333; align-self:flex-end; color:#fff; }
+#inputZone { display:flex; gap:8px; padding:10px; background:#121212; }
+#inputZone input { flex:1; padding:12px; border-radius:10px; border:none; background:#222; color:#fff; }
+#inputZone button { padding:12px 16px; border-radius:10px; border:none; background:linear-gradient(90deg,#6a11cb,#2575fc); color:#fff; font-weight:bold; cursor:pointer; }
+#inputZone button:active { transform:translateY(1px);}
 </style>
 </head>
 <body>
-<div id="chat">
-  <div id="header">Power AI</div>
+
+<div id="chatBox">
   <div id="messages"></div>
   <div id="inputZone">
-    <input type="text" id="msg" placeholder="Écris un message..." />
-    <button id="send">Envoyer</button>
+    <input id="msgInput" type="text" placeholder="Écris un message..." />
+    <button id="sendBtn">Envoyer</button>
   </div>
 </div>
 
 <script>
-let userId = null;
-const ws = new WebSocket(`wss://${window.location.host}`);
-const messagesDiv = document.getElementById("messages");
-const input = document.getElementById("msg");
-const sendBtn = document.getElementById("send");
+let ws;
+let userId;
+let convName = prompt("Nom de ta conversation :", "Ma Conversation") || "Ma Conversation";
 
-// Ajouter un message dans le chat
-function addMessage(text, sender) {
-  const div = document.createElement("div");
-  div.className = `msg ${sender}`;
+function initWS(){
+  const base = window.location.protocol==='https:'?'wss':'ws';
+  ws = new WebSocket(`${base}://${window.location.host}`);
+  ws.onopen = ()=> {
+    ws.send(JSON.stringify({type:'set_name', name:convName}));
+  };
+
+  ws.onmessage = (ev)=>{
+    let data;
+    try{ data = JSON.parse(ev.data); }catch(e){ return; }
+    if(data.type==='init'){
+      userId = data.userId;
+      (data.messages||[]).forEach(m=>addMessage(m.sender, m.text));
+    }
+    else if(data.type==='admin'){
+      addMessage('admin', data.text);
+    }
+    else if(data.type==='session_deleted'){
+      alert("Ta session a été terminée par l'admin. Actualise la page.");
+    }
+  };
+}
+
+function addMessage(sender, text){
+  const div = document.createElement('div');
+  div.className = 'msg ' + sender;
   div.textContent = text;
-  messagesDiv.appendChild(div);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  document.getElementById('messages').appendChild(div);
+  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
 }
 
-// Ajouter l'animation "Génération de votre réponse..."
-function addTyping() {
-  const typingDiv = document.createElement("div");
-  typingDiv.className = "typing";
-  typingDiv.id = "typingIndicator";
-  typingDiv.textContent = "Génération de votre réponse...";
-  messagesDiv.appendChild(typingDiv);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+document.getElementById('sendBtn').onclick = sendMessage;
+document.getElementById('msgInput').addEventListener('keypress', e=>{ if(e.key==='Enter') sendMessage(); });
+
+function sendMessage(){
+  const txt = document.getElementById('msgInput').value.trim();
+  if(!txt) return;
+  addMessage('user', txt);
+  ws.send(JSON.stringify({type:'user_message', text:txt}));
+  document.getElementById('msgInput').value='';
 }
 
-// Supprimer le "typing"
-function removeTyping() {
-  const typingDiv = document.getElementById("typingIndicator");
-  if (typingDiv) typingDiv.remove();
-}
-
-ws.onmessage = event => {
-  const data = JSON.parse(event.data);
-  if (data.type === "init") {
-    userId = data.userId;
-    data.messages.forEach(m => addMessage(m.text, m.sender));
-  } else if (data.sender) {
-    removeTyping(); // retire l'animation avant d'afficher la réponse
-    addMessage(data.text, data.sender);
-  }
-};
-
-sendBtn.onclick = () => {
-  if (input.value.trim() !== "") {
-    addMessage(input.value, "user"); // ton message
-    addTyping(); // animation "Génération de votre réponse..."
-    ws.send(JSON.stringify({ text: input.value }));
-    input.value = "";
-  }
-};
+initWS();
 </script>
+
 </body>
 </html>
