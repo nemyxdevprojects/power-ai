@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <title>Power AI - Admin</title>
 <style>
-body { font-family: 'Segoe UI', sans-serif; background:#0e0e0e; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; }
-#loginScreen { width:360px; padding:26px; background:#1a1a1a; border-radius:14px; text-align:center; }
-#loginScreen input { width:100%; padding:12px; border-radius:10px; border:none; margin-bottom:10px; background:#222; color:#fff; }
-#loginScreen button { padding:11px 18px; border-radius:10px; border:none; background:linear-gradient(90deg,#6a11cb,#2575fc); color:#fff; cursor:pointer; font-weight:600; }
-#error{ color:#ff6b6b; margin-top:8px;}
+body{font-family:'Segoe UI',sans-serif;background:#0e0e0e;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;}
+#loginScreen{width:360px;padding:26px;background:#1a1a1a;border-radius:14px;text-align:center;}
+#loginScreen input{width:100%;padding:12px;border-radius:10px;border:none;margin-bottom:10px;background:#222;color:#fff;}
+#loginScreen button{padding:11px 18px;border-radius:10px;border:none;background:linear-gradient(90deg,#6a11cb,#2575fc);color:#fff;cursor:pointer;font-weight:600;}
+#error{color:#ff6b6b;margin-top:8px;}
 #mainPanel{display:none;height:92vh;width:94vw;max-width:1200px;display:flex;background:#121212;border-radius:12px;overflow:hidden;box-shadow:0 0 40px rgba(0,0,0,0.7);}
 #sidebar{width:300px;background:#151515;padding:14px;overflow-y:auto;border-right:1px solid #222;}
 .userItem{padding:10px;margin-bottom:8px;border-radius:10px;background:#1e1e1e;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:.15s;color:#ddd;}
@@ -54,7 +54,6 @@ const mainPanel=document.getElementById('mainPanel');
 const btnLogin=document.getElementById('btnLogin');
 const pwdInput=document.getElementById('pwd');
 const errorDiv=document.getElementById('error');
-
 btnLogin.addEventListener('click',doLogin);
 pwdInput.addEventListener('keypress',e=>{if(e.key==='Enter')doLogin();});
 
@@ -63,8 +62,7 @@ async function doLogin(){
   if(!pwd){ errorDiv.textContent='Entre le mot de passe.'; return;}
   try{
     const res=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd})});
-    if(res.ok){ showPanel(); } 
-    else{ errorDiv.textContent='Mot de passe incorrect.';}
+    if(res.ok){ showPanel(); } else{ errorDiv.textContent='Mot de passe incorrect.';}
   }catch(e){ errorDiv.textContent='Erreur serveur.'; console.error(e);}
 }
 
@@ -81,7 +79,6 @@ function initAdminPanel(){
   const messagesDiv=document.getElementById('messages');
   const adminMsgInput=document.getElementById('adminMsg');
   const btnSend=document.getElementById('btnSend');
-
   let conversations={};
   let currentUser=null;
 
@@ -127,7 +124,6 @@ function initAdminPanel(){
 
   btnSend.onclick=sendReply;
   adminMsgInput.addEventListener('keypress',e=>{if(e.key==='Enter')sendReply();});
-
   function sendReply(){
     const txt=adminMsgInput.value.trim();
     if(!txt||!currentUser) return;
@@ -138,6 +134,5 @@ function initAdminPanel(){
   }
 }
 </script>
-
 </body>
 </html>
